@@ -1,0 +1,10 @@
+{
+  "target_url": "https://example.com",
+  "allowed_host_suffixes": [
+    "example.com"
+  ],
+  "port": 16800,
+  "upstream_proxy_on": false,
+  "upstream_proxy_url": "",
+  "access_log": false
+}

@@ -1,0 +1,4 @@
+website-proxy
+*.exe
+*.log
+*.pid

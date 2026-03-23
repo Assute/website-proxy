@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+
+name="website-proxy"
+description="Website proxy service"
+directory="/opt/website-proxy"
+command="/opt/website-proxy/website-proxy"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="${output_log}"
+retry="TERM/30/KILL/5"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --mode 0755 /run
+    checkpath --file --mode 0644 "${output_log}"
+}
