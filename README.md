@@ -13,6 +13,20 @@
 
 如果你只关心怎么运行，直接看下面就够了。
 
+## 一键安装
+
+在 Alpine 服务器上执行：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Assute/website-proxy/main/install.sh | sh
+```
+
+如果你要强制覆盖已有 `config.json`：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Assute/website-proxy/main/install.sh | OVERWRITE_CONFIG=1 sh
+```
+
 ## 需要的文件
 
 把这 3 个文件放到 Alpine 服务器：
