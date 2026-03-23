@@ -4,6 +4,8 @@
 
 仓库里的 `website-proxy` 文件是给 Alpine Linux 使用的二进制。
 
+源码放在仓库里的 `source/` 文件夹。
+
 它的主要作用是：
 
 - 给目标网站提供一个统一的中转加速入口
@@ -20,6 +22,20 @@
 - `/opt/website-proxy/website-proxy` 这是 Alpine Linux 二进制
 - `/opt/website-proxy/website-proxy.initd`
 - `/opt/website-proxy/config.json`
+
+## 源码位置
+
+源码文件在：
+
+```text
+source/
+```
+
+如果你要自己重新编译二进制：
+
+```sh
+go build -o website-proxy ./source
+```
 
 ## 怎么运行
 
