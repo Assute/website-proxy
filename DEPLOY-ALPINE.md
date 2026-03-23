@@ -1,5 +1,7 @@
 # Alpine Deployment
 
+The `website-proxy` binary in this repository is built for Alpine Linux.
+
 This release uses:
 
 - binary: `website-proxy`

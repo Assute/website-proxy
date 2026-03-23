@@ -2,6 +2,8 @@
 
 一个网站中转加速服务，用来把目标网站通过当前服务器地址进行访问。
 
+仓库里的 `website-proxy` 文件是给 Alpine Linux 使用的二进制。
+
 它的主要作用是：
 
 - 给目标网站提供一个统一的中转加速入口
@@ -13,9 +15,9 @@
 
 ## 需要的文件
 
-把这 3 个文件放到服务器：
+把这 3 个文件放到 Alpine 服务器：
 
-- `/opt/website-proxy/website-proxy`
+- `/opt/website-proxy/website-proxy` 这是 Alpine Linux 二进制
 - `/opt/website-proxy/website-proxy.initd`
 - `/opt/website-proxy/config.json`
 
