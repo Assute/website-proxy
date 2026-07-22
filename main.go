@@ -584,43 +584,7 @@ func (s *server) resolveRoute(rawURL, proxyOrigin string, r *http.Request) (*rou
 		return prefixedRoute, nil
 	}
 
-	if strings.HasPrefix(rawURL, canonicalProxyPath) {
-		return nil, errRouteNotFound
-	}
-
-	normalizedPath := rawURL
-	if normalizedPath == "" || normalizedPath == "/" {
-		normalizedPath = "/"
-	} else if !strings.HasPrefix(normalizedPath, "/") {
-		normalizedPath = "/" + normalizedPath
-	}
-
-	pathURL, err := url.Parse(normalizedPath)
-	if err != nil {
-		return nil, fmt.Errorf("invalid route path: %w", err)
-	}
-
-	pathKey := buildPathKey(pathURL.Path, pathURL.RawQuery)
-	targetBase := s.getTargetFromReferer(r.Referer(), proxyOrigin)
-	if targetBase == nil && pathKey != "/" {
-		targetBase = s.getCachedContextualTarget(pathKey)
-	}
-	if targetBase == nil {
-		return nil, errRouteNotFound
-	}
-
-	targetURL := targetBase.ResolveReference(pathURL)
-	pathKey = buildPathKey(targetURL.Path, targetURL.RawQuery)
-	s.rememberContextualTarget(pathKey, targetBase)
-
-	return &routeContext{
-		RouteMode:  "root",
-		Target:     targetBase,
-		TargetURL:  targetURL,
-		Prefix:     buildTargetPrefix(targetBase),
-		PublicBase: proxyOrigin,
-		PathKey:    pathKey,
-	}, nil
+	return nil, errRouteNotFound
 }
 
 func isMainEntryRequest(rawURL string) bool {
@@ -675,12 +639,12 @@ func (s *server) parseCanonicalPrefixedRoute(rawURL string) (*routeContext, bool
 	remainder := strings.TrimPrefix(rawURL, prefixRoot)
 	schemeEnd := strings.IndexByte(remainder, '/')
 	if schemeEnd <= 0 {
-		return nil, false, nil
+		return s.parseDefaultTargetPathRoute(rawURL)
 	}
 
 	scheme := remainder[:schemeEnd]
 	if scheme != "http" && scheme != "https" {
-		return nil, false, nil
+		return s.parseDefaultTargetPathRoute(rawURL)
 	}
 
 	hostAndPath := remainder[schemeEnd+1:]
@@ -728,6 +692,31 @@ func (s *server) parseCanonicalPrefixedRoute(rawURL string) (*routeContext, bool
 		Target:    targetBase,
 		TargetURL: targetURL,
 		Prefix:    prefix,
+	}, true, nil
+}
+
+func (s *server) parseDefaultTargetPathRoute(rawURL string) (*routeContext, bool, error) {
+	prefixRoot := canonicalProxyPath + "/"
+	if !strings.HasPrefix(rawURL, prefixRoot) {
+		return nil, false, nil
+	}
+
+	targetPath := "/" + strings.TrimLeft(strings.TrimPrefix(rawURL, prefixRoot), "/")
+	pathURL, err := url.Parse(targetPath)
+	if err != nil {
+		return nil, true, fmt.Errorf("invalid route path: %w", err)
+	}
+
+	targetBase := cloneURL(s.cfg.DefaultTargetBase)
+	targetURL := targetBase.ResolveReference(pathURL)
+
+	return &routeContext{
+		RouteMode:  "entry",
+		Target:     targetBase,
+		TargetURL:  targetURL,
+		Prefix:     canonicalProxyPath,
+		PublicBase: "",
+		PathKey:    buildPathKey(targetURL.Path, targetURL.RawQuery),
 	}, true, nil
 }
 
@@ -964,9 +953,6 @@ func (s *server) rewriteLocationHeader(location string, route *routeContext) str
 		return location
 	}
 
-	if route.RouteMode == "root" && nextURL.Scheme == s.cfg.DefaultTargetBase.Scheme && nextURL.Host == s.cfg.DefaultTargetBase.Host {
-		return nextURL.RequestURI() + nextURL.Fragment
-	}
 	if route.RouteMode == "entry" && nextURL.Scheme == s.cfg.DefaultTargetBase.Scheme && nextURL.Host == s.cfg.DefaultTargetBase.Host {
 		return canonicalProxyPath + nextURL.RequestURI() + nextURL.Fragment
 	}
@@ -1054,9 +1040,6 @@ func (s *server) getPublicOriginForMatch(scheme, host, proxyOrigin string, route
 func (s *server) getPublicOriginForTarget(targetBase *url.URL, proxyOrigin string, route *routeContext) string {
 	if route.RouteMode == "entry" && sameOrigin(targetBase, s.cfg.DefaultTargetBase) {
 		return proxyOrigin + canonicalProxyPath
-	}
-	if route.RouteMode == "root" && sameOrigin(targetBase, s.cfg.DefaultTargetBase) {
-		return proxyOrigin
 	}
 	if route.RouteMode == "prefixed" && sameOrigin(targetBase, route.Target) {
 		return route.PublicBase
@@ -1470,7 +1453,10 @@ func rewriteOrderPaymentBundle(body string) string {
 }
 
 func rewriteHTMLRootRelativeAttrs(body string, route *routeContext) string {
-	if route == nil || route.RouteMode != "prefixed" || route.Prefix == "" {
+	if route == nil || route.Prefix == "" {
+		return body
+	}
+	if route.RouteMode != "prefixed" && route.RouteMode != "entry" {
 		return body
 	}
 	if !strings.Contains(body, "=\"/") && !strings.Contains(body, "='/") {
